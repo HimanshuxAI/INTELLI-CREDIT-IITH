@@ -82,8 +82,15 @@ export default function Home() {
 
       setProcessingStep('extracting');
 
+      const headers: HeadersInit = {};
+      const customKey = localStorage.getItem('openrouter_key');
+      if (customKey) {
+        headers['X-API-Key'] = customKey.trim();
+      }
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
+        headers,
         body: formData,
       });
 
