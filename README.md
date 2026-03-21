@@ -24,19 +24,124 @@ Built for speed, accuracy, and resilience, IntelliCredit features real-time Serv
 
 ## 🏗️ Architecture & Deep Dive
 
-We built IntelliCredit to be highly modular and production-ready. 
+### High-Level Architecture Block Diagram
 
-👉 **[Read the full Architecture & Code Deep Dive (ARCHITECTURE.md)](./ARCHITECTURE.md)** for detailed block diagrams, data flow sequence charts, and an explanation of the multi-model AI logic.
+```mermaid
+graph TD
+    %% User Interface
+    subgraph Frontend
+        UI[User Interface]
+        DB[Dashboard]
+        ING[Document Ingestor]
+        PORT[Portfolio & Sub-screens]
+    end
+
+    %% API Layer
+    subgraph Backend API
+        API_ANALYZE[/api/analyze]
+        API_TEST[/api/test-connection]
+    end
+
+    %% Processing
+    subgraph Document Processing Layer
+        PDF[pdf-parse]
+        XLSX[xlsx]
+        REG[Regex Financial Extractor]
+    end
+
+    %% External
+    subgraph External AI Services
+        OR[OpenRouter API]
+        LLM_1[LLaMA 3.3 70B]
+        LLM_2[Mistral 24B]
+        LLM_n[Other Fallback Models]
+    end
+
+    %% Connections
+    UI -->|Upload Documents| ING
+    ING -->|FormData Files| API_ANALYZE
+    
+    API_ANALYZE -->|Buffer| PDF
+    API_ANALYZE -->|Buffer| XLSX
+    
+    PDF -->|Raw Text| REG
+    XLSX -->|Raw Text| REG
+    
+    REG -->|Text + Prompts| OR
+    OR -->|Streaming SSE| API_ANALYZE
+    API_ANALYZE -->|Server-Sent Events| ING
+    
+    OR -->|Route to| LLM_1
+    OR -.->|Fallback if 429| LLM_2
+    OR -.->|Fallback if 429| LLM_n
+```
+
+### API & Data Flow (The `analyze` Route Sequence)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Ingestor UI
+    participant API route
+    participant Parsers
+    participant AI OpenRouter
+
+    User->>Ingestor UI: Uploads PDFs/XLSX
+    Ingestor UI->>API route: POST /api/analyze
+    API route-->>Ingestor UI: Opens SSE Connection
+    
+    API route->>Parsers: Extract text from Files
+    Parsers-->>API route: Raw Text
+    
+    API route->>Ingestor UI: stream extraction done
+    
+    loop Fallback Mechanism
+        API route->>AI OpenRouter: Prompt + Extracted Text
+        alt Rate Limited 429
+            AI OpenRouter-->>API route: Error 429
+            API route->>AI OpenRouter: Try Model 2...
+        else Success 200
+            AI OpenRouter-->>API route: Stream Tokens
+        end
+    end
+    
+    loop Streaming Response
+        API route->>Ingestor UI: stream token
+        Ingestor UI-->>User: Typewriter effect in UI
+    end
+    
+    API route->>API route: Regex JSON Extraction & Parse
+    API route->>Ingestor UI: stream final JSON
+```
+
+### The "Demo Mode" Fallback Engine (Offline Resilience)
+
+If the active internet connection drops, open-router goes completely offline, or all 5 models are rate-limited, the system engages a **Smart Fallback Engine**. It does *not* crash or leave the user hanging.
+
+1.  **`inferCompanyName()` & `inferSector()`:** Regex algorithms run on the uploaded filenames to guess the company and sector (e.g., "SunrisePharma" -> "Pharmaceuticals").
+2.  **`extractFinancialsFromText()`:** An advanced local Regex miner that scans the extracted `allText` for raw financial patterns:
+    *   Turnover (`₹\d+ Cr`)
+    *   Net Worth (`Shareholders Equity \d+`)
+    *   DSCR / Debt-Equity (`\d.\d×`)
+    *   CIN (`L...PLC...`)
+3.  **Score Construction:** It takes these real numbers and mathematically generates highly plausible "Demo" 5C scores using the company name as a reproducible mathematical seed.
+4.  **Simulated Streaming:** It chops this generated JSON into 25-character chunks and streams them back via `setTimeout` manually bypassing the AI entirely but preserving the exact UI user-experience.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Technology Stack & Directory Structure
 
 *   **Frontend:** Next.js 15 (App Router), React, Tailwind CSS 3.4
 *   **Data Visualization:** Recharts, Lucide React
 *   **Backend / API:** Next.js Serverless Edge Routes
 *   **Document Processing:** `pdf-parse@1.1.1` (raw text extraction), `xlsx`
 *   **AI Integration:** OpenRouter API (Streaming Server-Sent Events)
+
+### Key Files
+*   `app/api/analyze/route.ts`: **The Core Engine**. Handles multipart data, PDF extraction, LLM fallback routing, SSE streaming, and Regex text mining.
+*   `components/screens/Ingestor.tsx`: The drag-and-drop zone and real-time SSE listener for typewriter effects.
+*   `components/screens/Comparison.tsx`: The math engine calculating competitor distances to declare winners.
+*   `app/globals.css`: Fully hardware-accelerated CSS keyframe animations (no heavy JS libraries).
 
 ---
 
