@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY || '').trim();
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Helper: infer company name from uploaded filenames
@@ -115,8 +115,7 @@ function extractFinancialsFromText(text: string) {
 
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<{ text: string; pages: number }> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParseModule = require('pdf-parse');
-  const pdfParse = pdfParseModule.default || pdfParseModule;
+  const pdfParse = require('pdf-parse');
   const data = await pdfParse(Buffer.from(buffer));
   return { text: data.text, pages: data.numpages || Math.max(1, Math.ceil(data.text.length / 3000)) };
 }
@@ -190,6 +189,9 @@ RULES:
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Debug: log what key the route sees
+  console.log('[analyze] API Key loaded:', OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 15)}... (${OPENROUTER_API_KEY.length} chars)` : 'EMPTY!');
 
   try {
     const formData = await request.formData();
@@ -276,32 +278,56 @@ export async function POST(request: NextRequest) {
 
         let fullContent = '';
         try {
-          // Call OpenRouter - streaming
-          const response = await fetch(OPENROUTER_URL, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://intellicredit.app',
-              'X-Title': 'IntelliCredit',
-            },
-            body: JSON.stringify({
-              model: 'anthropic/claude-sonnet-4',
-              messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                {
-                  role: 'user',
-                  content: `Here are the extracted documents for credit appraisal:\n\n${allText}\n\nAnalyze these documents and return the JSON credit appraisal.`,
-                },
-              ],
-              max_tokens: 4096,
-              temperature: 0.3,
-              stream: true,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`OpenRouter returned ${response.status}`);
+          // Try multiple free models in order — fallback if one is rate-limited
+          const FREE_MODELS = [
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'mistralai/mistral-small-3.1-24b-instruct:free',
+            'qwen/qwen3-coder:free',
+            'nvidia/nemotron-3-super-120b-a12b:free',
+            'nousresearch/hermes-3-llama-3.1-405b:free',
+          ];
+          
+          let response: Response | null = null;
+          let lastError = '';
+          
+          for (const model of FREE_MODELS) {
+            console.log(`[analyze] Trying model: ${model}`);
+            const res = await fetch(OPENROUTER_URL, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://intellicredit.app',
+                'X-Title': 'IntelliCredit',
+              },
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: 'system', content: SYSTEM_PROMPT },
+                  {
+                    role: 'user',
+                    content: `Here are the extracted documents for credit appraisal:\n\n${allText}\n\nAnalyze these documents and return the JSON credit appraisal.`,
+                  },
+                ],
+                max_tokens: 4000,
+                temperature: 0.3,
+                stream: true,
+              }),
+            });
+            
+            if (res.ok) {
+              response = res;
+              console.log(`[analyze] ✓ Using model: ${model}`);
+              break;
+            }
+            
+            const errBody = await res.text();
+            lastError = `${model} → ${res.status}: ${errBody.substring(0, 150)}`;
+            console.warn(`[analyze] ${model} failed (${res.status}), trying next...`);
+          }
+          
+          if (!response) {
+            throw new Error(`All models failed. Last: ${lastError}`);
           }
 
           // Read the stream from OpenRouter
@@ -411,7 +437,11 @@ export async function POST(request: NextRequest) {
 
           // Parse the complete JSON response
           try {
-            const cleaned = fullContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            // Find the outermost JSON object to ignore any conversational text the model added
+            const match = fullContent.match(/\{[\s\S]*\}/);
+            const jsonText = match ? match[0] : fullContent;
+            
+            const cleaned = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const analysisData = JSON.parse(cleaned);
 
             // Add colors
