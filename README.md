@@ -38,8 +38,8 @@ graph TD
 
     %% API Layer
     subgraph Backend API
-        API_ANALYZE[/api/analyze]
-        API_TEST[/api/test-connection]
+        API_ANALYZE["/api/analyze"]
+        API_TEST["/api/test-connection"]
     end
 
     %% Processing
