@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY || '').trim();
+const envApiKey = (process.env.OPENROUTER_API_KEY || '').trim();
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Helper: infer company name from uploaded filenames
@@ -189,6 +189,7 @@ RULES:
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  const OPENROUTER_API_KEY = (request.headers.get('X-API-Key') || process.env.OPENROUTER_API_KEY || '').trim();
   
   // Debug: log what key the route sees
   console.log('[analyze] API Key loaded:', OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 15)}... (${OPENROUTER_API_KEY.length} chars)` : 'EMPTY!');

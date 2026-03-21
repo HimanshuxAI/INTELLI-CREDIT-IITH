@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Settings() {
   const [saved, setSaved] = useState(false);
+  const [apiKey, setApiKey] = useState('');
   const [weights, setWeights] = useState({ Character:20, Capacity:25, Capital:20, Collateral:20, Conditions:15 });
   const [prefs, setPrefs] = useState([
     { label:'Auto-run research agent on upload', active: true },
@@ -16,7 +17,12 @@ export default function Settings() {
 
   const total = Object.values(weights).reduce((a,b) => a+b, 0);
 
+  useEffect(() => {
+    setApiKey(localStorage.getItem('openrouter_key') || '');
+  }, []);
+
   const handleSave = () => {
+    localStorage.setItem('openrouter_key', apiKey.trim());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -84,8 +90,25 @@ export default function Settings() {
           <div className="card">
             <div className="card-header"><span className="card-label">API Connections</span></div>
             <div className="p-4 flex flex-col gap-3">
+              <div className="py-2 border-b border-surface-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[12.5px] font-semibold text-ink-2">OpenRouter API (BYOK)</span>
+                  <span className={cn('tag text-[10.5px]', apiKey ? 'tag-green' : 'tag-amber')}>
+                    {apiKey ? 'Configured LOCALLY' : 'Using .env fallback'}
+                  </span>
+                </div>
+                <input 
+                  type="password" 
+                  placeholder="sk-or-v1-..." 
+                  className="w-full bg-surface-2 border border-border rounded-[6px] px-3 py-1.5 text-[12px] font-mono-ic focus:outline-none focus:border-brand-blue"
+                  value={apiKey}
+                  onChange={e => setApiKey(e.target.value)}
+                />
+                <p className="text-[11px] text-muted mt-1.5 leading-relaxed">
+                  Saves securely to your browser. Overrides the server environment key.
+                </p>
+              </div>
               {[
-                { name:'Claude API (Anthropic)', key:'sk-ant-...xxxx', status:'Connected' },
                 { name:'MCA21 Portal', key:'Configured via OAuth', status:'Connected' },
                 { name:'eCourts API', key:'Configured via Gov API', status:'Connected' },
                 { name:'CIBIL Commercial', key:'Not configured', status:'Pending' },
