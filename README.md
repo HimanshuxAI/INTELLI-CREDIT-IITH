@@ -19,6 +19,7 @@ We built a **Live Credit Decisioning Engine** that mimics the workflow of a huma
 
 ## ✨ Core & Unique Features
 
+- 🔑 **Bring Your Own Key (BYOK):** Judges and testers can securely enter their OpenRouter API key directly in the IntelliCredit Settings UI. It saves locally to browser storage—no need to configure backend `.env` files to test the app!
 - 📄 **Insta-Parse Engine:** Upload massive PDFs or XLSX files. Our local execution parses thousands of pages into raw text instantly.
 - 🧠 **Multi-Model AI Orchestration:** Powered by OpenRouter, the system routes your documents to state-of-the-art open-weight models (Llama 3.3 70B, Mistral, Qwen) to generate the appraisal.
 - 🌊 **Resilient Fallback System:** If the primary AI is rate-limited, the system seamlessly falls back to the next available model. If *all* internet connectivity drops, the system uses an offline Regex-miner to extract Turnover, Net Worth, CIN, and DSCR directly from the text to generate plausible scores.
@@ -39,7 +40,7 @@ Vivriti Capital processes corporate credit at scale. Every week lost to manual C
 *   **📈 Scalability:** Proven to scale across complex sectors (tested successfully on high-volume documents from Textiles, Pharmaceuticals, and Shipping).
 *   **🇮🇳 India-Native:** Purpose-built for domestic formats (Schedule III, GST, MCA21, eCourts) rather than generic global data.
 
-> **The Hackathon Edge:** No other team is showing a *live working prototype* featuring real-time AI document analysis, multi-model fallback streaming, automated peer comparison, and cross-document contradiction detection in a single, polished architecture.
+> **The Hackathon Edge:** No other team is showing a *live working prototype* featuring real-time AI document analysis, multi-model fallback streaming, automated peer comparison, cross-document contradiction detection, and a built-in BYOK testing suite in a single, polished architecture.
 
 ---
 
@@ -54,6 +55,7 @@ graph TD
         UI[User Interface]
         DB[Dashboard]
         ING[Document Ingestor]
+        SETTINGS[Settings / BYOK]
         PORT[Portfolio & Sub-screens]
     end
 
@@ -80,7 +82,8 @@ graph TD
 
     %% Connections
     UI -->|Upload Documents| ING
-    ING -->|FormData Files| API_ANALYZE
+    SETTINGS -->|Saved locally| ING
+    ING -->|FormData + API Key Header| API_ANALYZE
     
     API_ANALYZE -->|Buffer| PDF
     API_ANALYZE -->|Buffer| XLSX
@@ -108,7 +111,7 @@ sequenceDiagram
     participant AI OpenRouter
 
     User->>Ingestor UI: Uploads PDFs/XLSX
-    Ingestor UI->>API route: POST /api/analyze
+    Ingestor UI->>API route: POST /api/analyze (w/ Custom Key)
     API route-->>Ingestor UI: Opens SSE Connection
     
     API route->>Parsers: Extract text from Files
@@ -160,6 +163,7 @@ If the active internet connection drops, open-router goes completely offline, or
 
 ### Key Files
 *   `app/api/analyze/route.ts`: **The Core Engine**. Handles multipart data, PDF extraction, LLM fallback routing, SSE streaming, and Regex text mining.
+*   `components/screens/Settings.tsx`: Features secure local management of BYOK (Bring Your Own Key) for API overriding.
 *   `components/screens/Ingestor.tsx`: The drag-and-drop zone and real-time SSE listener for typewriter effects.
 *   `components/screens/Comparison.tsx`: The math engine calculating competitor distances to declare winners.
 *   `app/globals.css`: Fully hardware-accelerated CSS keyframe animations (no heavy JS libraries).
@@ -179,19 +183,12 @@ cd INTELLI-CREDIT-IITH
 npm install
 ```
 
-**3. Configure Environment Variables**
-Create a `.env.local` file in the root directory and add your OpenRouter API key:
-```env
-OPENROUTER_API_KEY="your-openrouter-api-key"
-```
-
-**4. Start the Development Server**
+**3. Test It Instantly (BYOK)**
+Run the server visually. You do *not* need to set up `.env.local`!
 ```bash
 npm run dev
 ```
-
-**5. Open the App**
-Navigate to `http://localhost:3000` in your browser.
+Open `http://localhost:3000`. Navigate to the **Settings** tab in the sidebar and paste your OpenRouter API key. Click Save, and the app will use your key locally.
 
 ---
 
