@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; font-size: 14px; }
+  body { @apply bg-bg text-ink font-sans overflow-hidden h-screen; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border-2 rounded-full; }
+}
+
+@layer utilities {
+  .animate-delay-1 { animation-delay: 50ms; }
+  .animate-delay-2 { animation-delay: 100ms; }
+  .animate-delay-3 { animation-delay: 150ms; }
+  .animate-delay-4 { animation-delay: 200ms; }
+  .animate-delay-5 { animation-delay: 250ms; }
+  .animate-delay-6 { animation-delay: 300ms; }
+  .font-display { font-family: 'Instrument Serif', Georgia, serif; }
+  .font-mono-ic { font-family: 'Geist Mono', monospace; }
+
+  .shimmer-bg {
+    background: linear-gradient(90deg, #f0efeb 25%, #e8e6e0 50%, #f0efeb 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+
+  .card {
+    @apply bg-surface border border-border rounded-[10px] overflow-hidden;
+  }
+  .card-header {
+    @apply px-4 py-3 border-b border-border flex items-center justify-between;
+  }
+  .card-label {
+    @apply text-[11px] font-semibold text-muted uppercase tracking-[0.05em];
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-[7px] text-[12.5px] font-semibold transition-all duration-150 select-none;
+  }
+  .btn-primary { @apply bg-brand-blue text-white hover:bg-blue-700 shadow-sm; }
+  .btn-ghost   { @apply border border-border text-muted hover:bg-surface-3 hover:text-ink-2; }
+  .btn-ink     { @apply bg-ink text-white hover:bg-ink-2; }
+  .btn-green   { @apply bg-brand-green text-white hover:bg-green-800; }
+  .btn-danger  { @apply bg-brand-red text-white hover:bg-red-800; }
+
+  .tag {
+    @apply inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[11px] font-semibold;
+  }
+  .tag-green  { @apply bg-brand-green-lt text-brand-green border border-brand-green-md; }
+  .tag-amber  { @apply bg-brand-amber-lt text-brand-amber border border-brand-amber-md; }
+  .tag-red    { @apply bg-brand-red-lt text-brand-red border border-brand-red-md; }
+  .tag-blue   { @apply bg-brand-blue-lt text-brand-blue border border-brand-blue-md; }
+  .tag-purple { @apply bg-brand-purple-lt text-brand-purple border border-brand-purple-md; }
+  .tag-muted  { @apply bg-surface-3 text-muted border border-border; }
+
+  .nav-item {
+    @apply flex items-center gap-2.5 px-2.5 py-[7px] rounded-[7px] text-[13px] font-medium text-muted cursor-pointer transition-all duration-150 relative select-none;
+  }
+  .nav-item:hover { @apply bg-bg text-ink-2; }
+  .nav-item.active { @apply bg-brand-blue-lt text-brand-blue font-semibold; }
+  .nav-item.active::before {
+    content: '';
+    @apply absolute left-0 top-1 bottom-1 w-[3px] bg-brand-blue rounded-r;
+  }
+}
+
+/* SVG score ring animation */
+.score-ring-fill {
+  stroke-dasharray: 339.3;
+  stroke-dashoffset: 339.3;
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Bar fill animation */
+.bar-fill {
+  width: 0%;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Processing step */
+.proc-step { @apply flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[12.5px] text-muted transition-all duration-300; }
+.proc-step.running { @apply bg-brand-blue-lt text-brand-blue font-semibold; }
+.proc-step.done { @apply text-brand-green; }
+
+/* Drag over */
+.drag-over { @apply border-brand-blue bg-brand-blue-lt; }
+
+/* File row hover */
+.file-row { @apply flex items-center gap-3 px-3 py-2.5 bg-surface-2 border border-border rounded-[7px] hover:border-border-2 hover:bg-surface transition-all duration-150 animate-fade-up; }
+
+/* CAM rationale */
+.rationale { @apply border-l-[3px] border-brand-blue bg-brand-blue-lt pl-4 pr-4 py-3 rounded-r-[8px] text-[12.5px] text-ink-2 leading-relaxed; }
+
+/* Metric tile */
+.metric-tile { @apply bg-surface-2 border border-border rounded-[8px] p-4 text-center; }
+.metric-val  { @apply font-display text-[26px] leading-none text-brand-blue; }
+.metric-lbl  { @apply text-[10.5px] text-faint mt-1; }
+
+/* Research item */
+.research-item { @apply px-4 py-3 border-b border-border last:border-0 hover:bg-surface-2 cursor-pointer transition-colors duration-150; }
+
+/* Risk signal */
+.risk-signal { @apply flex gap-3 items-start p-3 bg-surface-2 border border-border rounded-[7px] hover:border-border-2 hover:bg-surface transition-all duration-150 animate-fade-up; }
+
+/* C card */
+.c-card { @apply border border-border rounded-[8px] overflow-hidden bg-surface hover:shadow-md transition-all duration-200; }
+
+/* Explain step */
+.explain-step { @apply flex gap-3 items-start animate-fade-up; }
+
+/* Wiggle animation for bell icon */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(12deg); }
+  30% { transform: rotate(-10deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  75% { transform: rotate(3deg); }
+}
+.animate-wiggle { animation: wiggle 0.6s ease-in-out; }
+
+/* Premium card hover effects */
+.card { transition: box-shadow 0.25s ease, transform 0.25s ease; }
+.card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.06), 0 1px 4px rgba(0,0,0,.04); }
+
+/* C-card enhanced hover */
+.c-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+
+/* Metric tile hover */
+.metric-tile { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.metric-tile:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+
+/* Research item active */
+.research-item:hover { background: var(--surface-2); border-color: var(--border-2); }
+
+/* File row active interaction */
+.file-row:hover { transform: translateX(2px); }
+
+/* Risk signal hover */
+.risk-signal:hover { transform: translateX(2px); }
+
+/* Nav item micro-animation */
+.nav-item { transition: all 0.15s ease, background 0.2s ease; }
+.nav-item:hover { transform: translateX(2px); }
+
+/* Smooth tag transitions */
+.tag { transition: all 0.2s ease; }
+
+/* Button press effect */
+.btn:active { transform: scale(0.97); }
+.btn { transition: all 0.15s ease; }
+
+/* Scrollbar smooth appearance */
+::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
+
