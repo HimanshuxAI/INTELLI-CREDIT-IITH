@@ -57,6 +57,16 @@ export interface AIResearchItem {
   meta: string;
 }
 
+export interface RuleAuditEntry {
+  rule: string;
+  deduction: number;
+  category: 'Character' | 'Capacity' | 'Capital' | 'Collateral' | 'Conditions' | 'AutoReject';
+  source: string;
+  value: string;
+  threshold: string;
+  confidence: 'high' | 'medium' | 'low';
+}
+
 export interface AnalysisResult {
   companyProfile: AICompanyProfile;
   financials: AIFinancials;
@@ -69,4 +79,8 @@ export interface AnalysisResult {
   processingTime: string;
   pagesProcessed: number;
   extractedText?: string;
+  ruleAuditTrail?: RuleAuditEntry[];
+  confidenceReport?: any;
+  limitBreakdown?: any;
+  warningTriggers?: any[];
 }

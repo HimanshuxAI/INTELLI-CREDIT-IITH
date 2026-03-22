@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 
-const OPENROUTER_API_KEY = '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';
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
 const SYSTEM_PROMPT = `You are an expert Indian credit analyst assistant for IntelliCredit. You have just completed a credit appraisal analysis on uploaded financial documents. The user (a credit officer) is now asking you questions about the analysis.
 
@@ -18,6 +17,10 @@ Key points:
 - Keep responses focused and under 300 words unless asked for detail`;
 
 export async function POST(request: NextRequest) {
+  let GEMINI_API_KEY = (request.headers.get('X-API-Key') || process.env.GEMINI_API_KEY || '').trim();
+  if (GEMINI_API_KEY && !GEMINI_API_KEY.startsWith('AIzaSy')) {
+    GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+  }
   try {
     const body = await request.json();
     const { messages, extractedText, analysisResult } = body;
@@ -51,16 +54,16 @@ ANALYSIS RESULTS:
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const response = await fetch(OPENROUTER_URL, {
+          const response = await fetch(GEMINI_URL, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'Authorization': `Bearer ${GEMINI_API_KEY}`,
               'Content-Type': 'application/json',
               'HTTP-Referer': 'https://intellicredit.app',
               'X-Title': 'IntelliCredit Chat',
             },
             body: JSON.stringify({
-              model: 'anthropic/claude-sonnet-4',
+              model: 'gemini-2.5-flash',
               messages: [
                 { role: 'system', content: systemWithContext },
                 ...messages,
