@@ -95,8 +95,18 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Analysis failed');
+        if (response.status === 413) {
+          throw new Error('File(s) too large for Vercel upload limit (4.5MB). Please upload a smaller file or host elsewhere.');
+        }
+        let errMsg = 'Analysis failed';
+        try {
+          const errData = await response.json();
+          errMsg = errData.error || errMsg;
+        } catch (e) {
+          const text = await response.text();
+          errMsg = text || errMsg;
+        }
+        throw new Error(errMsg);
       }
 
       // Read SSE stream
