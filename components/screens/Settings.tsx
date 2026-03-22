@@ -18,11 +18,11 @@ export default function Settings() {
   const total = Object.values(weights).reduce((a,b) => a+b, 0);
 
   useEffect(() => {
-    setApiKey(localStorage.getItem('openrouter_key') || '');
+    setApiKey(localStorage.getItem('gemini_key') || '');
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem('openrouter_key', apiKey.trim());
+    localStorage.setItem('gemini_key', apiKey.trim());
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -92,14 +92,14 @@ export default function Settings() {
             <div className="p-4 flex flex-col gap-3">
               <div className="py-2 border-b border-surface-3">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-[12.5px] font-semibold text-ink-2">OpenRouter API (BYOK)</span>
+                  <span className="text-[12.5px] font-semibold text-ink-2">Gemini API (BYOK)</span>
                   <span className={cn('tag text-[10.5px]', apiKey ? 'tag-green' : 'tag-amber')}>
                     {apiKey ? 'Configured LOCALLY' : 'Using .env fallback'}
                   </span>
                 </div>
                 <input 
                   type="password" 
-                  placeholder="sk-or-v1-..." 
+                  placeholder="AIzaSy..." 
                   className="w-full bg-surface-2 border border-border rounded-[6px] px-3 py-1.5 text-[12px] font-mono-ic focus:outline-none focus:border-brand-blue"
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}

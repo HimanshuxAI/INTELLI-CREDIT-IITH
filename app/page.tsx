@@ -83,7 +83,7 @@ export default function Home() {
       setProcessingStep('extracting');
 
       const headers: HeadersInit = {};
-      const customKey = localStorage.getItem('openrouter_key');
+      const customKey = localStorage.getItem('gemini_key');
       if (customKey) {
         headers['X-API-Key'] = customKey.trim();
       }
@@ -124,7 +124,7 @@ export default function Home() {
 
             if (event.type === 'extraction') {
               setExtractionInfo(event);
-              setProcessingStep('ai_calling');
+              setProcessingStep('extracting');
             } else if (event.type === 'status') {
               setProcessingStep('ai_calling');
             } else if (event.type === 'token') {
@@ -186,7 +186,7 @@ export default function Home() {
            </div>
            <p className="text-[12.5px] text-white/80 mb-5 leading-relaxed min-h-[40px]">
              {tourStep === 1 && "Step 1: Welcome! Upload your borrower documents securely here in the dropzone."}
-             {tourStep === 2 && "Step 2: AI extracts data, runs risk scoring, and generates real insights in 4 minutes."}
+             {tourStep === 2 && "Step 2: Rule engines extract data, run deterministic scoring, and generate auditable results in seconds."}
              {tourStep === 3 && "Step 3: Review the CAM. Export it to PDF, simulate risks, or click Peer Compare."}
            </p>
            <button 
