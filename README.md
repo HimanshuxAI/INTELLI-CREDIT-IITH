@@ -7,7 +7,7 @@
 
 **IntelliCredit** is a next-generation, AI-driven credit underwriting platform built to automate the complex financial appraisal process for corporate lending. It ingests dense financial documentation (Bank Statements, Annual Reports, GST Returns) and instantly outputs structured, data-driven credit decisions based on the industry-standard **5C Framework** (Character, Capacity, Capital, Collateral, Conditions).
 
-Built for speed, accuracy, and resilience, IntelliCredit features real-time Server-Sent Events (SSE) streaming, local Regex-driven financial text extraction, and an intelligent multi-model AI router.
+Built for speed, accuracy, and resilience, IntelliCredit features real-time Server-Sent Events (SSE) streaming, local Regex-driven financial text extraction, a deterministic multi-stage Rule Engine, and an intelligent AI narrative generator.
 
 ---
 
@@ -21,8 +21,8 @@ We built a **Live Credit Decisioning Engine** that mimics the workflow of a huma
 
 - 🔑 **Bring Your Own Key (BYOK):** Judges and testers can securely enter their OpenRouter API key directly in the IntelliCredit Settings UI. It saves locally to browser storage—no need to configure backend `.env` files to test the app!
 - 📄 **Insta-Parse Engine:** Upload massive PDFs or XLSX files. Our local execution parses thousands of pages into raw text instantly.
-- 🧠 **Multi-Model AI Orchestration:** Powered by OpenRouter, the system routes your documents to state-of-the-art open-weight models (Llama 3.3 70B, Mistral, Qwen) to generate the appraisal.
-- 🌊 **Resilient Fallback System:** If the primary AI is rate-limited, the system seamlessly falls back to the next available model. If *all* internet connectivity drops, the system uses an offline Regex-miner to extract Turnover, Net Worth, CIN, and DSCR directly from the text to generate plausible scores.
+- 🧠 **Deterministic Rule Engines + AI Narrative:** Core 5C scoring, GSTR gap analysis, and credit limit computations are handled by local, lightning-fast deterministic TypeScript engines. The system then routes the analytical data to **Gemini 2.5 Flash** to generate a human-readable Credit Appraisal Memorandum (CAM) rationale.
+- 🌊 **Resilient Fallback System:** Because the core scoring is deterministic, if the internet connectivity drops or the AI API fails, the system bypasses the narrative generation and successfully completes the credit analysis, substituting in offline fallback logic so the user is never blocked.
 - 🕸️ **Promoter Network & Contradiction Engine (Unique):** Goes beyond simple extraction by mapping promoter networks across entities and algorithmically detecting cross-document contradictions (e.g., mismatch between declared bank balance and auditor's report).
 - 📊 **Dynamic 5C Dashboards:** Interactive UI with Recharts-powered Radar and Bar charts visualizing borrower health. 
 - 🏆 **Peer Comparison Engine:** Automatically rank and compare multiple borrowers. The engine mathematically calculates the best candidate based on composite scores and highlights the winner.
@@ -62,42 +62,40 @@ graph TD
     %% API Layer
     subgraph Backend API
         API_ANALYZE["/api/analyze"]
-        API_TEST["/api/test-connection"]
+        API_CHAT["/api/chat"]
     end
 
     %% Processing
-    subgraph Document Processing Layer
-        PDF[pdf-parse]
-        XLSX[xlsx]
-        REG[Regex Financial Extractor]
+    subgraph Core Rule Engine Layer
+        PDF[pdf-parse / xlsx]
+        EXT[Regex Financial Extractor]
+        ENG[GSTR, Contradiction & Scoring Engines]
+        LIM[Limit & Warning Engines]
     end
 
     %% External
     subgraph External AI Services
-        OR[OpenRouter API]
-        LLM_1[LLaMA 3.3 70B]
-        LLM_2[Mistral 24B]
-        LLM_n[Other Fallback Models]
+        GEM[Gemini 2.5 Flash API]
     end
 
     %% Connections
     UI -->|Upload Documents| ING
-    SETTINGS -->|Saved locally| ING
+    SETTINGS -->|API Key saved locally| ING
     ING -->|FormData + API Key Header| API_ANALYZE
     
     API_ANALYZE -->|Buffer| PDF
-    API_ANALYZE -->|Buffer| XLSX
     
-    PDF -->|Raw Text| REG
-    XLSX -->|Raw Text| REG
+    PDF -->|Raw Text| EXT
+    EXT -->|Structured Data| ENG
+    ENG -->|Analyzed Data| LIM
     
-    REG -->|Text + Prompts| OR
-    OR -->|Streaming SSE| API_ANALYZE
+    LIM -->|Deterministic JSON Result| API_ANALYZE
     API_ANALYZE -->|Server-Sent Events| ING
     
-    OR -->|Route to| LLM_1
-    OR -.->|Fallback if 429| LLM_2
-    OR -.->|Fallback if 429| LLM_n
+    LIM -.->|Async Rationale Request| GEM
+    GEM -.->|Streamed Narrative| API_ANALYZE
+    
+    API_CHAT -->|Context + Queries| GEM
 ```
 
 ### API & Data Flow (The `analyze` Route Sequence)
@@ -106,36 +104,33 @@ graph TD
 sequenceDiagram
     participant User
     participant Ingestor UI
-    participant API route
-    participant Parsers
-    participant AI OpenRouter
+    participant API /api/analyze
+    participant Local Rule Engines
+    participant Gemini AI
 
-    User->>Ingestor UI: Uploads PDFs/XLSX
-    Ingestor UI->>API route: POST /api/analyze (w/ Custom Key)
-    API route-->>Ingestor UI: Opens SSE Connection
+    User->>Ingestor UI: Uploads PDFs/XLSX/CSV
+    Ingestor UI->>API /api/analyze: POST (w/ Custom Key)
+    API /api/analyze-->>Ingestor UI: Opens SSE Connection
     
-    API route->>Parsers: Extract text from Files
-    Parsers-->>API route: Raw Text
+    API /api/analyze->>Local Rule Engines: Extract text from Files
+    Local Rule Engines-->>API /api/analyze: Structured Financial Data
     
-    API route->>Ingestor UI: stream extraction done
+    API /api/analyze->>Ingestor UI: stream status (Rule Engine)
     
-    loop Fallback Mechanism
-        API route->>AI OpenRouter: Prompt + Extracted Text
-        alt Rate Limited 429
-            AI OpenRouter-->>API route: Error 429
-            API route->>AI OpenRouter: Try Model 2...
-        else Success 200
-            AI OpenRouter-->>API route: Stream Tokens
+    Local Rule Engines->>Local Rule Engines: GSTR, Contradiction, & Scoring Analysis
+    Local Rule Engines-->>API /api/analyze: Final Deterministic JSON Result
+    
+    API /api/analyze->>Ingestor UI: stream JSON Result
+    
+    par Async Rationale Generation
+        API /api/analyze->>Gemini AI: Provide JSON Result + Prompt
+        alt Success
+            Gemini AI-->>API /api/analyze: Rationale Narrative text
+            API /api/analyze->>Ingestor UI: stream rationale/complete
+        else Fallback
+            API /api/analyze->>Ingestor UI: Stream Offline Fallback Narrative
         end
     end
-    
-    loop Streaming Response
-        API route->>Ingestor UI: stream token
-        Ingestor UI-->>User: Typewriter effect in UI
-    end
-    
-    API route->>API route: Regex JSON Extraction & Parse
-    API route->>Ingestor UI: stream final JSON
 ```
 
 ### The "Demo Mode" Fallback Engine (Offline Resilience)
@@ -157,12 +152,15 @@ If the active internet connection drops, open-router goes completely offline, or
 
 *   **Frontend:** Next.js 15 (App Router), React, Tailwind CSS 3.4
 *   **Data Visualization:** Recharts, Lucide React
-*   **Backend / API:** Next.js Serverless Edge Routes
-*   **Document Processing:** `pdf-parse@1.1.1` (raw text extraction), `xlsx`
-*   **AI Integration:** OpenRouter API (Streaming Server-Sent Events)
+*   **Backend / API:** Next.js Serverless Routes
+*   **Document Processing:** `pdf-parse` (raw text extraction), `xlsx`
+*   **Core Logic:** TypeScript Deterministic Rule Engines (`lib/engines/`)
+*   **AI Integration:** Gemini 2.5 Flash API (Streaming Server-Sent Events)
 
 ### Key Files
-*   `app/api/analyze/route.ts`: **The Core Engine**. Handles multipart data, PDF extraction, LLM fallback routing, SSE streaming, and Regex text mining.
+*   `app/api/analyze/route.ts`: **The Core API**. Handles multipart data, orchestrates the internal rule engines, and queries the Gemini AI for the rationale.
+*   `app/api/chat/route.ts`: **The Interactive Chat API**. Provides an interactive context-aware chatbot interface to interrogate the document.
+*   `lib/engines/`: **The Deterministic Heart**. Contains isolated engines: `extractor`, `validator`, `gstr-engine`, `contradiction-engine`, `scoring-engine`, `limit-engine`, `warning-engine`, etc.
 *   `components/screens/Settings.tsx`: Features secure local management of BYOK (Bring Your Own Key) for API overriding.
 *   `components/screens/Ingestor.tsx`: The drag-and-drop zone and real-time SSE listener for typewriter effects.
 *   `components/screens/Comparison.tsx`: The math engine calculating competitor distances to declare winners.
