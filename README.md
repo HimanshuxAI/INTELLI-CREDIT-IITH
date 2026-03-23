@@ -196,4 +196,3 @@ Open `http://localhost:3000`. Navigate to the **Settings** tab in the sidebar an
 For testing the extraction and AI, use standard financial documents like Bank Statements or Annual Reports. The engine looks for standard financial reporting structures to extract Net Worth, DSCR, and Turnover.
 
 ---
-*Built with ❤️ for the Hackathon*
